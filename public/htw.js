@@ -145,6 +145,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (mapEl) {
     mapEl.scrollIntoView({ block: 'center', inline: 'center' })
   }
+  // Apply WebXRay accent color on page load
+  applyWebXRayAccentColor()
 })
 
 function getLng() {
@@ -158,6 +160,39 @@ function loadXRay() {
     script.className = 'webxray'
     script.setAttribute('data-lang', 'en-US')
     script.setAttribute('data-baseuri', document.location.origin + '/webxray')
+    script.addEventListener('load', () => {
+      // Apply WebXRay accent color after WebXRay loads
+      setTimeout(applyWebXRayAccentColor, 100)
+    })
     document.body.appendChild(script)
   })()
 }
+
+/**
+ * Apply user's accent color to WebXRay elements
+ * Reads the --main-color CSS variable (set by server) and applies it to WebXRay
+ */
+function applyWebXRayAccentColor() {
+  try {
+    const mainColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--main-color')
+      .trim()
+    
+    if (mainColor && /^#[0-9a-fA-F]{6}$/.test(mainColor)) {
+      document.documentElement.style.setProperty('--webxray-accent-color', mainColor)
+    }
+  } catch (e) {
+    console.warn('Error applying WebXRay accent color:', e)
+  }
+}
+
+// Listen for color changes in profile
+const observer = new MutationObserver(() => {
+  applyWebXRayAccentColor()
+})
+
+// Start observing for style changes on documentElement
+observer.observe(document.documentElement, {
+  attributes: true,
+  attributeFilter: ['style'],
+})
