@@ -387,6 +387,10 @@ div#webxray-wait-for-css-to-load {
 
 /* The touch-based toolbar for mobile devices, etc. */
 
+:root {
+  --webxray-accent-color: #3FB58E;
+}
+
 .webxray-toolbar {
   position: fixed;
   z-index: 2147483644;
@@ -405,7 +409,7 @@ div#webxray-wait-for-css-to-load {
 }
 
 .webxray-toolbar-button:hover {
-  background-color: #3FB58E;
+  background-color: var(--webxray-accent-color);
   color: #fff;
 }
 
@@ -426,8 +430,35 @@ div.webxray-toolbar-button-glyph-tiny {
 }
 
 .webxray-toolbar-button-toggled {
-  background-color: yellow;
-  color: black;
+  background-color: var(--webxray-accent-color);
+  color: white;
+}
+
+/* Dialog button styling */
+.webxray-dialog-inner button,
+.webxray-dialog-inner input[type="button"],
+.webxray-dialog-inner input[type="submit"] {
+  background-color: var(--webxray-accent-color);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.webxray-dialog-inner button:hover,
+.webxray-dialog-inner input[type="button"]:hover,
+.webxray-dialog-inner input[type="submit"]:hover {
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.webxray-dialog-inner button:active,
+.webxray-dialog-inner input[type="button"]:active,
+.webxray-dialog-inner input[type="submit"]:active {
+  opacity: 0.8;
 }
 
 
