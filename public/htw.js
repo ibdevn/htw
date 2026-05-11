@@ -160,10 +160,6 @@ function loadXRay() {
     script.className = 'webxray'
     script.setAttribute('data-lang', 'en-US')
     script.setAttribute('data-baseuri', document.location.origin + '/webxray')
-    script.addEventListener('load', () => {
-      // Apply WebXRay accent color after WebXRay loads
-      setTimeout(applyWebXRayAccentColor, 100)
-    })
     document.body.appendChild(script)
   })()
 }
@@ -180,19 +176,100 @@ function applyWebXRayAccentColor() {
     
     if (mainColor && /^#[0-9a-fA-F]{6}$/.test(mainColor)) {
       document.documentElement.style.setProperty('--webxray-accent-color', mainColor)
+      
+      // Inject CSS into all iframes (WebXRay dialog iframes)
+      injectAccentColorIntoIframes(mainColor)
     }
   } catch (e) {
     console.warn('Error applying WebXRay accent color:', e)
   }
 }
 
-// Listen for color changes in profile
-const observer = new MutationObserver(() => {
+/**
+ * Inject the accent color CSS into WebXRay dialog iframes
+ */
+function injectAccentColorIntoIframes(accentColor) {
+  try {
+    const iframes = document.querySelectorAll('iframe')
+    iframes.forEach((iframe) => {
+      try {
+        if (iframe.contentDocument) {
+          // Inject CSS variable into iframe's root element
+          if (iframe.contentDocument.documentElement) {
+            iframe.contentDocument.documentElement.style.setProperty('--webxray-accent-color', accentColor)
+          }
+          
+          // Inject a style tag if needed
+          let styleTag = iframe.contentDocument.getElementById('webxray-accent-color-style')
+          if (!styleTag) {
+            styleTag = iframe.contentDocument.createElement('style')
+            styleTag.id = 'webxray-accent-color-style'
+            styleTag.innerHTML = `
+              :root {
+                --webxray-accent-color: ${accentColor};
+              }
+              button, input[type="button"], input[type="submit"] {
+                background-color: var(--webxray-accent-color);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                cursor: pointer;
+                border-radius: 4px;
+                font-size: 14px;
+                font-weight: 500;
+              }
+              button:hover, input[type="button"]:hover, input[type="submit"]:hover {
+                opacity: 0.9;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+              }
+              button:active, input[type="button"]:active, input[type="submit"]:active {
+                opacity: 0.8;
+              }
+            `
+            iframe.contentDocument.head.appendChild(styleTag)
+          } else {
+            // Update existing style tag
+            styleTag.innerHTML = styleTag.innerHTML.replace(
+              /--webxray-accent-color: #[0-9a-fA-F]{6}/,
+              `--webxray-accent-color: ${accentColor}`
+            )
+          }
+        }
+      } catch (e) {
+        // Cross-origin iframes will throw errors - that's expected
+      }
+    })
+  } catch (e) {
+    console.warn('Error injecting accent color into iframes:', e)
+  }
+}
+
+// Listen for color changes and iframe creations
+const observer = new MutationObserver((mutations) => {
   applyWebXRayAccentColor()
+  // Also check for new iframes
+  mutations.forEach((mutation) => {
+    if (mutation.addedNodes.length > 0) {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === 1 && node.tagName === 'IFRAME') {
+          // Wait a bit for iframe to load before injecting
+          setTimeout(applyWebXRayAccentColor, 100)
+        }
+      })
+    }
+  })
 })
 
-// Start observing for style changes on documentElement
+// Start observing for style changes and DOM additions on documentElement
 observer.observe(document.documentElement, {
   attributes: true,
   attributeFilter: ['style'],
+  childList: true,
+  subtree: true,
+})
+
+// Also observe body for iframe additions
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
 })
