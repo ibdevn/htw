@@ -5,6 +5,7 @@ import { withLogger } from './server/lib/withLogger.js'
 import { withDb } from './server/lib/withDb.js'
 import { withI18n } from './server/lib/withI18n.js'
 import { withExpress } from './server/lib/withExpress.js'
+import { withSocket } from './server/lib/withSocket.js'
 import { withCsrf } from './server/lib/withCsrf.js'
 import { withMoment } from './server/lib/withMoment.js'
 import { withPeriodic } from './server/lib/withPeriodic.js'
@@ -54,6 +55,8 @@ import { withExperiments } from './server/lib/withExperiments.js'
 import { setupStoryline } from './content/storyline.js'
 import { setupHackerQuiz } from './content/hacker-quiz/hacker-quiz.js'
 import { withQuizData } from './server/lib/withQuizData.js'
+import { setupCoolesGame } from './content/cooles-game.js'
+import { withWormsData } from './server/lib/withWormsData.js'
 
 /** @type {any} App will be assembled step-wise */
 const preApp = {
@@ -66,6 +69,7 @@ withLogger(preApp)
 await withDb(preApp)
 withI18n(preApp)
 withExpress(preApp)
+withSocket(preApp)
 withCsrf(preApp)
 withMoment(preApp)
 withPeriodic(preApp)
@@ -109,6 +113,7 @@ setupEnough(App)
 setupWWWM(App)
 setupStoryline(App)
 
+withWormsData(App)
 setupWormsBasic(App)
 setupWormsManagement(App)
 setupWormsArena(App)
@@ -121,6 +126,8 @@ setupDiscordSSO(App)
 
 setupLiveAnalyze(App)
 setupEvent(App)
+
+setupCoolesGame(App)
 
 // keep it for now
 _deprecated__setupDecodeMe(App)

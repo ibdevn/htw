@@ -1,0 +1,352 @@
+<%- props.navigation %>
+
+<h3 id="status">...</h3>
+
+<% if (props.canCancel) { %>
+<p id="cancel-area">
+  <span id="cancel-ask"><button id="cancel-button" class="btn btn-sm btn-outline-danger" onClick="showCancelConfirm(true)"><%= props.pending ? t('worms.arena.cancelMatch') : t('worms.arena.forfeit') %></button> <span id="cancel-hint" style="color: gray; margin-left: 8px;"><%= props.pending ? t('worms.arena.cancelHintPending') : t('worms.arena.forfeitHint') %></span></span>
+  <span id="cancel-confirm" style="display: none;"><span id="cancel-question"><%= props.pending ? t('worms.arena.cancelConfirm') : t('worms.arena.forfeitConfirm') %></span> <button id="cancel-yes" class="btn btn-sm btn-danger" style="margin-left: 8px;" onClick="cancelMatch()"><%= props.pending ? t('worms.arena.cancelYes') : t('worms.arena.forfeitYes') %></button> <button class="btn btn-sm btn-secondary" style="margin-left: 4px;" onClick="showCancelConfirm(false)"><%= t('worms.arena.no') %></button></span>
+</p>
+<% } %>
+
+<style>
+  #board-overlay {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.7); color: white; padding: 12px 20px;
+    border-radius: 10px; font-size: 22px; text-align: center; z-index: 1000;
+  }
+  #board-overlay small { display: block; font-size: 15px; color: gray; margin-top: 4px; }
+  #board-overlay .dots span { animation: worms-dot 1.4s infinite; opacity: 0.2; }
+  #board-overlay .dots span:nth-child(2) { animation-delay: 0.2s; }
+  #board-overlay .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes worms-dot { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+</style>
+
+<div id="live">
+  <h4 style="text-align: center; margin-top: 24px;"><span style="color: rgb(239, 68, 68)"><% if (props.redName) { %><%= props.redName %><% } else { %>[<i><%= t('worms.arena.deletedBot') %></i>]<% } %></span> <i>vs</i> <span style="color: rgb(34, 197, 94)"><% if (props.greenName) { %><%= props.greenName %><% } else { %>[<i><%= t('worms.arena.deletedBot') %></i>]<% } %></span></h4>
+  <div style="display: flex; justify-content: end; margin-bottom: -8px; margin-top: 16px;">
+    <span><label><input type="checkbox" onClick="wormer.toggleTurbo()"/> <%= t('worms.testRun.turbo') %></label></span>
+  </div>
+  <div id="board"></div>
+  <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
+    <button type="button" id="pause-button" class="btn btn-sm btn-outline-secondary" style="min-width: 40px;" disabled title="<%= t('worms.arena.pauseResume') %>">⏸︎</button>
+    <input type="range" id="timeline" min="0" max="0" value="0" step="1" style="flex: 1;" disabled aria-label="<%= t('worms.arena.timeline') %>">
+    <span id="timeline-pos" style="color: gray; font-size: 14px; min-width: 120px; text-align: right; font-variant-numeric: tabular-nums;"></span>            </div>
+  <div style="height:70px"></div>
+</div>
+
+<script src="/socket.io/socket.io.min.js"></script>
+<script src="/worms/wormer.js?v=44"></script>
+
+<script>
+  const replayUrl = <%- JSON.stringify(props.replayUrl) %>
+  const matchId = <%- JSON.stringify(props.matchId) %>
+  const texts = {
+    queued: <%- JSON.stringify(t('worms.arena.matchQueued')) %>,
+    inQueue: <%- JSON.stringify(t('worms.arena.inQueue')) %>,
+    starting: <%- JSON.stringify(t('worms.arena.matchStarting')) %>,
+    botsLoading: <%- JSON.stringify(t('worms.arena.botsLoading')) %>,
+    runningLong: <%- JSON.stringify(t('worms.arena.matchRunningLong')) %>,
+    running: <%- JSON.stringify(t('worms.arena.matchRunning')) %>,
+    step: <%- JSON.stringify(t('worms.arena.step')) %>,
+    done: <%- JSON.stringify(t('worms.arena.matchDone')) %>,
+    forfeited: <%- JSON.stringify(t('worms.arena.matchForfeited')) %>,
+    error: <%- JSON.stringify(t('worms.arena.matchError')) %>,
+    failed: <%- JSON.stringify(t('worms.arena.matchFailed')) %>,
+    cancelledShort: <%- JSON.stringify(t('worms.arena.matchCancelledShort')) %>,
+    cancelled: <%- JSON.stringify(t('worms.arena.matchCancelled')) %>,
+    notStarted: <%- JSON.stringify(t('worms.arena.matchNotStarted')) %>,
+    backToArena: <%- JSON.stringify(t('worms.arena.backToArena')) %>,
+    round: <%- JSON.stringify(t('worms.arena.round')) %>,
+    live: <%- JSON.stringify(t('worms.arena.liveLabel')) %>,
+    connectionLost: <%- JSON.stringify(t('worms.arena.connectionLost')) %>,
+    tooManyConnections: <%- JSON.stringify(t('worms.arena.tooManyConnections')) %>,
+  }
+  // empty arena is shown right away, worms appear with the first move
+  const wormer = new Wormer(document.getElementById('board'), undefined, undefined, <%- props.wormerMessages %>)
+  const statusEl = document.getElementById('status')
+  let started = false
+  // finished, cancelled or failed: nothing more comes from the server
+  let ended = false
+
+  // back to the current state, e.g. after the tab was hidden: jump to the
+  // newest move, or straight to the end if the match is over by now
+  function catchUp() {
+    if (!started || !following) return
+    if (wormer.liveDone) wormer.instant = true
+    else wormer.skipAhead()
+  }
+  // the animation pauses while the tab is hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState == 'visible') catchUp()
+  })
+  // reconnected: the missed moves come in again, catch up once they are here
+  let resync = false
+
+  // timeline: scroll back and forth, the right end is the newest move
+  const timeline = document.getElementById('timeline')
+  let following = true
+  let dragging = false
+  let seekTo = -1
+  // all the way to the right is live
+  function inLiveZone() {
+    return parseInt(timeline.value) >= parseInt(timeline.max)
+  }
+  function liveRound() {
+    return Math.floor(wormer.dirs.length / 2)
+  }
+  timeline.addEventListener('input', () => {
+    dragging = true
+    following = false
+    // no moves while the timeline is held
+    wormer.held = true
+    // seek at most once per frame while dragging
+    if (seekTo < 0) {
+      requestAnimationFrame(() => {
+        wormer.seek(seekTo * 2)
+        seekTo = -1
+      })
+    }
+    seekTo = inLiveZone() ? liveRound() : parseInt(timeline.value)
+  })
+  function release() {
+    if (!dragging) return
+    dragging = false
+    wormer.held = false
+    if (inLiveZone()) {
+      following = true
+      wormer.paused = false
+      if (!wormer.liveDone) wormer.skipAhead()
+    }
+  }
+  timeline.addEventListener('change', release)
+  // the change event is missing when let go at the starting value
+  document.addEventListener('pointerup', release)
+
+  const pauseButton = document.getElementById('pause-button')
+  pauseButton.addEventListener('click', () => {
+    wormer.paused = !wormer.paused
+    if (wormer.paused) following = false
+  })
+
+  setInterval(() => {
+    timeline.disabled = !started
+    pauseButton.disabled = !started
+    if (!started) return
+    const total = liveRound()
+    const pos = Math.floor(wormer.consumed / 2)
+    const live = following && !wormer.liveDone
+    if (!dragging) {
+      timeline.max = total
+      timeline.value = Math.min(total, pos)
+    }
+    document.getElementById('timeline-pos').innerText = dragging
+      ? texts.round + ' ' + (inLiveZone() ? liveRound() + ' · ' + texts.live : timeline.value)
+      : texts.round + ' ' + pos + (live ? ' · ' + texts.live : '')
+    pauseButton.innerText = wormer.paused ? '▶︎' : '⏸︎'
+  }, 100)
+
+  const overlay = document.createElement('div')
+  overlay.id = 'board-overlay'
+  document.getElementById('board').appendChild(overlay)
+
+  function showOverlay(title, subtitle) {
+    const html =
+      title +
+      '<span class="dots"><span>.</span><span>.</span><span>.</span></span>' +
+      (subtitle ? '<small>' + subtitle + '</small>' : '')
+    // only update on change, otherwise the dot animation restarts
+    if (overlay.dataset.html != html) {
+      overlay.dataset.html = html
+      overlay.innerHTML = html
+    }
+  }
+  showOverlay(texts.starting)
+
+  function showRunningText() {
+    const moves = wormer.dirs.length
+    statusEl.innerText = moves == 0
+      ? texts.runningLong
+      : texts.running + ' (' + texts.step + ' ' + Math.ceil(moves / 2) + ')'
+  }
+
+  // the server pushes every change of the match and every move as soon as
+  // the bots made it, socket.io reconnects by itself
+  const socket = io({ closeOnBeforeunload: true })
+
+  function watch() {
+    socket.emit('worms:watch', { id: matchId, from: started ? wormer.dirs.length : 0 })
+  }
+  socket.on('connect', watch)
+
+  socket.on('connect_error', (err) => {
+    if (ended) return
+    statusEl.innerText = err.message == 'too many connections'
+      ? texts.tooManyConnections
+      : texts.connectionLost
+    // refused by the server: socket.io does not try again by itself
+    if (!socket.active && err.message != 'not logged in') {
+      setTimeout(() => socket.connect(), 5000)
+    }
+  })
+
+  socket.on('disconnect', () => {
+    if (ended) return
+    statusEl.innerText = texts.connectionLost
+    resync = true
+  })
+
+  // `at`: index of the first move in `dirs`
+  function addMoves(at, dirs) {
+    if (!started || ended) return
+    const have = wormer.dirs.length
+    if (at > have) {
+      // some moves got lost on the way, ask again from where we are
+      watch()
+      return
+    }
+    const fresh = dirs.slice(have - at)
+    if (fresh.length) {
+      wormer.feedLive(fresh)
+      showRunningText()
+    }
+  }
+
+  socket.on('worms:moves', (msg) => {
+    if (msg.id == matchId) addMoves(msg.at, msg.dirs)
+  })
+
+  socket.on('worms:state', (state) => {
+    if (state.id != matchId || ended) return
+
+    if (state.finished) {
+      ended = true
+      socket.disconnect()
+      hideCancel()
+      statusEl.innerText = state.replay.aborted ? texts.forfeited : texts.done
+      if (!started || !state.replay.dirs.length) {
+        window.location.href = replayUrl
+        return
+      }
+      let leaving = false
+      const toReplay = () => {
+        if (leaving) return
+        leaving = true
+        window.location.href = replayUrl + '&instant=1'
+      }
+      wormer.onFinish = () => setTimeout(toReplay, 2000)
+      // cancelled: don't keep playing moves the viewer hasn't seen yet
+      if (state.replay.aborted) wormer.instant = true
+      wormer.paused = false
+      wormer.held = false
+      wormer.finishLive(state.replay)
+      if (wormer.winner) wormer.onFinish()
+      if (resync) catchUp()
+      return
+    }
+
+    if (state.status == 'error' || state.status == 'missing') {
+      ended = true
+      socket.disconnect()
+      hideCancel()
+      statusEl.innerText = texts.error
+      overlay.innerHTML = texts.failed
+      document.getElementById('board').appendChild(overlay)
+      return
+    }
+
+    if (state.status == 'cancelled') {
+      ended = true
+      socket.disconnect()
+      hideCancel()
+      statusEl.innerText = texts.cancelled
+      overlay.innerHTML = texts.cancelledShort + '<small>' + texts.notStarted + ' <a href="/worms/arena">' + texts.backToArena + '</a></small>'
+      document.getElementById('board').appendChild(overlay)
+      return
+    }
+
+    setCancelState(state.status)
+
+    if (state.status == 'pending') {
+      statusEl.innerText = texts.queued + ' ' + state.queuePosition + ' ...'
+      showOverlay(texts.inQueue, texts.queued + ' ' + state.queuePosition)
+      return
+    }
+
+    // running, the bots are still loading
+    if (!state.start) {
+      statusEl.innerText = texts.runningLong
+      showOverlay(texts.starting, texts.botsLoading)
+      return
+    }
+
+    const joining = !started
+    if (joining) {
+      started = true
+      overlay.remove()
+      wormer.runLive(state.start)
+    }
+    addMoves(state.at, state.dirs)
+    // joined a match that is already running: start at the current state
+    if (joining) wormer.skipAhead()
+    else if (resync) catchUp()
+    resync = false
+    showRunningText()
+  })
+
+  function hideCancel() {
+    const area = document.getElementById('cancel-area')
+    if (area) area.style.display = 'none'
+  }
+
+  // waiting in the queue: cancel without rating, running: give up = loss
+  let cancelState = <%- JSON.stringify(props.matchStatus) %>
+  function setCancelState(state) {
+    if (!document.getElementById('cancel-area') || state == cancelState) return
+    if (state != 'pending' && state != 'running') return
+    cancelState = state
+    showCancelConfirm(false)
+    document.getElementById('cancel-yes').disabled = false
+    const pending = state == 'pending'
+    document.getElementById('cancel-button').innerText = pending
+      ? <%- JSON.stringify(t('worms.arena.cancelMatch')) %>
+      : <%- JSON.stringify(t('worms.arena.forfeit')) %>
+    document.getElementById('cancel-hint').innerText = pending
+      ? <%- JSON.stringify(t('worms.arena.cancelHintPending')) %>
+      : <%- JSON.stringify(t('worms.arena.forfeitHint')) %>
+    document.getElementById('cancel-question').innerText = pending
+      ? <%- JSON.stringify(t('worms.arena.cancelConfirm')) %>
+      : <%- JSON.stringify(t('worms.arena.forfeitConfirm')) %>
+    document.getElementById('cancel-yes').innerText = pending
+      ? <%- JSON.stringify(t('worms.arena.cancelYes')) %>
+      : <%- JSON.stringify(t('worms.arena.forfeitYes')) %>
+  }
+
+  // confirmation inside the page, native dialogs can be blocked
+  function showCancelConfirm(show) {
+    document.getElementById('cancel-ask').style.display = show ? 'none' : 'inline'
+    document.getElementById('cancel-confirm').style.display = show ? 'inline' : 'none'
+  }
+
+  function cancelMatch() {
+    document.getElementById('cancel-yes').disabled = true
+    fetch('/worms/arena/cancel-match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // tells the server what the user agreed to: cancelling a
+      // waiting match must never turn into giving up a running one
+      body: JSON.stringify({ id: matchId, expect: cancelState }),
+    }).then((res) => {
+      // 409: the match started or ended meanwhile, the server sends the
+      // new state on its own
+      if (res.status == 409) {
+        document.getElementById('cancel-yes').disabled = false
+        showCancelConfirm(false)
+      } else if (!res.ok) {
+        throw new Error()
+      }
+    }).catch(() => {
+      document.getElementById('cancel-yes').disabled = false
+    })
+  }
+</script>

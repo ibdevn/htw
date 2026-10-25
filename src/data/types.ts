@@ -10,6 +10,8 @@ import {
   Sequelize,
 } from 'sequelize'
 import { i18n } from 'i18next'
+import type { Server as HttpServer } from 'node:http'
+import type { Server as SocketServer } from 'socket.io'
 
 export interface App {
   config: typeof appConfig
@@ -23,6 +25,8 @@ export interface App {
   }
   moment: typeof Moment
   express: ReturnType<typeof express>
+  httpServer: HttpServer
+  io: SocketServer
   db: Sequelize & {
     models: {
       User: ModelStatic<UserModel>
@@ -99,6 +103,73 @@ export interface App {
     setQuizCompleted(userid: number, quizid: number): Promise<void>
     setDifficulty(userid: number, difficulty: 'easy' | 'hard'): Promise<void>
     setPwCheckCompleted(userid: number): Promise<void>
+  }
+  wormsData: {
+    getBot(id: number): Promise<WormsBotMeta | null>
+    getBotForUser(id: number, userId: number): Promise<WormsBotMeta | null>
+    getBotsForUser(userId: number): Promise<WormsBotMeta[]>
+    getBotsByIds(ids: number[]): Promise<WormsBotMeta[]>
+    getBotCode(id: number): Promise<string | null>
+
+    getBotElo(botId: number): Promise<number>
+    getBotElos(): Promise<Map<number, number>>
+    getBotAchievements(): Promise<Set<number>>
+    setBotElos(entries: Array<{ botId: number; elo: number }>): Promise<void>
+
+    createBot(input: {
+      userId: number
+      name: string
+      code: string
+    }): Promise<WormsBotMutationResult>
+
+    renameBot(input: {
+      userId: number
+      botId: number
+      name: string
+    }): Promise<WormsBotMutationResult>
+
+    saveBotCode(input: {
+      userId: number
+      botId: number
+      code: string
+    }): Promise<WormsBotMutationResult>
+
+    deleteBot(input: { userId: number; botId: number }): Promise<boolean>
+    removeUser(userId: number): Promise<void>
+
+    getMatch(id: number): Promise<WormsMatchMeta | null>
+    getMatchForUser(id: number, userId: number): Promise<WormsMatchMeta | null>
+    getMatchesForUser(
+      userId: number,
+      options?: { since?: number }
+    ): Promise<WormsMatchMeta[]>
+    getOpenMatchForUser(userId: number): Promise<WormsMatchMeta | null>
+    getPendingMatches(): Promise<WormsMatchMeta[]>
+    getFinishedMatches(): Promise<WormsMatchMeta[]>
+    getMatchesForBot(
+      botId: number,
+      options?: { onlyFinished?: boolean }
+    ): Promise<WormsMatchMeta[]>
+
+    getMatchReplay(id: number): Promise<WormsReplay | null>
+    getMatchReplays(ids: number[]): Promise<Map<number, WormsReplay>>
+
+    createMatch(input: {
+      userId: number
+      redBotId: number
+      greenBotId: number
+    }): Promise<WormsMatchMeta>
+
+    markMatchRunning(id: number): Promise<WormsMatchMeta | null>
+    markMatchError(id: number): Promise<WormsMatchMeta | null>
+    cancelMatch(id: number): Promise<WormsMatchMeta | null>
+    finishMatch(input: {
+      id: number
+      status: 'red-win' | 'green-win'
+      replay: WormsReplay
+    }): Promise<WormsMatchMeta | null>
+
+    resetOpenMatches(): Promise<void>
   }
 }
 
@@ -255,9 +326,9 @@ export class WormsArenaMatchModel extends Model<
   InferCreationAttributes<WormsArenaMatchModel>
 > {
   declare id: CreationOptional<number>
-  declare status: 'pending' | 'running' | 'red-win' | 'green-win' | 'error'
-  declare redBotId: number
-  declare greenBotId: number
+  declare status: WormsMatchStatus
+  declare redBotId: number | null
+  declare greenBotId: number | null
   declare UserId: number
   declare replay: string
   declare createdAt: CreationOptional<string | Date>
@@ -321,7 +392,7 @@ interface SessionData {
   chal338_ts?: number
   chal338_result?: string
   maze?: { x: number; y: number }
-  lastTestRun?: [number, number]
+  lastTestRun?: [number | 'me', number | 'me']
   lastWormsTab?:
     | 'two-player'
     | 'single-player'
@@ -394,7 +465,13 @@ export interface WormsReplay {
 
   winner: 'red' | 'green' | ''
   withCrash?: boolean
+  aborted?: boolean
 }
+
+export type WormsStart = Pick<
+  WormsReplay,
+  'xRed' | 'yRed' | 'dirRed' | 'xGreen' | 'yGreen' | 'dirGreen'
+>
 
 export type HintsData = {
   [key: number]: { entries: { question: string; answer: string }[] }
@@ -420,4 +497,42 @@ export interface ExperimentResult {
   nVisitorsTrial: number
   nSolversBase: number
   nSolversTrial: number
+}
+
+export interface WormsBotMeta {
+  readonly id: number
+  readonly name: string
+  readonly userId: number
+  readonly createdAt: number
+  readonly updatedAt: number
+}
+
+export type WormsBotMutationResult =
+  | { ok: true; bot: WormsBotMeta }
+  | {
+      ok: false
+      reason:
+        | 'invalid-name'
+        | 'name-exists'
+        | 'limit-reached'
+        | 'not-found'
+        | 'code-too-long'
+    }
+
+export type WormsMatchStatus =
+  | 'pending'
+  | 'running'
+  | 'red-win'
+  | 'green-win'
+  | 'error'
+  | 'cancelled'
+
+export interface WormsMatchMeta {
+  readonly id: number
+  readonly status: WormsMatchStatus
+  readonly redBotId: number | null
+  readonly greenBotId: number | null
+  readonly userId: number
+  readonly createdAt: number
+  readonly updatedAt: number
 }

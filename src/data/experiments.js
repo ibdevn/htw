@@ -885,4 +885,46 @@ export const experimentDefs = [
     learning:
       'So, also die CTR-Analyse zeigt, dass die Daten etwas unstabil waren, das ist schon interessant, aber die Datenbasis war auch nicht so riesig. Dadurch, dass es keine Regression gab, kann ich davon ausgehen, dass die neue Umfrage jetzt das Lösungsverhalten nicht wirklich beeinflusst und Leute, die die Umfrage davor ausgefüllt hätten, sie weiter ausfüllen würden.',
   },
+  {
+    id: 43,
+    description:
+      'UNIX: Ich probiere mal COMLINK aus mit Link zu einem Konverter.',
+    challenge: 30,
+    startTs: new Date('2026-07-07 00:01+0200').getTime(),
+    endTs: new Date('2026-08-04 00:01+0200').getTime(),
+    baseImg: '/experiments/43_base.jpg',
+    trialImg: '/experiments/43_trial.jpg',
+    results: {
+      numEvents: 28848,
+      nShowBase: 736,
+      nShowTrial: 734,
+      nVisitorsBase: 385,
+      nVisitorsTrial: 364,
+      nSolversBase: 202,
+      nSolversTrial: 215,
+    },
+    learning:
+      'Bei der Menge an Leuten hätte ich ein klareres Ergebnis erwartet. Aber so, wie es jetzt ist, bringt das COMLINK vielleicht einen Vorteil, vielleicht auch nicht. Ich würde daher an der Stelle erstmal rejecten und stattdessen nochmal eine andere Version probieren, vielleicht mit mehr Erklärung, vielleicht auch mit einem anderen Thema.',
+  },
+  {
+    id: 44,
+    description:
+      'Verdächtig: Lösungsrate ist immer noch super niedrig, ich versuche es mal mit einer Version, die bisschen Humor reinbringt',
+    challenge: 79,
+    startTs: new Date('2026-07-07 00:02+0200').getTime(),
+    endTs: new Date('2026-08-04 00:02+0200').getTime(),
+    baseImg: '/experiments/44_base.jpg',
+    trialImg: '/experiments/44_trial.jpg',
+    results: {
+      numEvents: 25055,
+      nShowBase: 597,
+      nShowTrial: 575,
+      nVisitorsBase: 361,
+      nVisitorsTrial: 344,
+      nSolversBase: 112,
+      nSolversTrial: 179,
+    },
+    learning:
+      'Absolut klare Empfehlung, diese Änderung umzusetzen, also ein krass hoher Effekt und das Engagement ist deutlich besser. Es ist selten, dass eine Änderung so klare Ergebnisse zeigt. Und ich würde auch sagen, von der Mechanik her ist die Aufgabe sogar anspruchsvoller geworden, weil man mehr Informationen verknüpfen muss. Der Humor gefällt mir ... und kommt anscheinend auch bei der Zielgruppe an.',
+  },
 ]

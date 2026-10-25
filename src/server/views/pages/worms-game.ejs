@@ -3,16 +3,22 @@
 <script src="/worms/wormer.js"></script>
 
 <div id="game" style="position: relative; padding-top: 4px;">
-  <p style="color: gray; padding-left: 8px;">
-    Roter Wurm: <span style="color: lightgray">WASD</span>
+  <style>
+    /* keyboard hints make no sense on phones and tablets */
+    @media (hover: none) and (pointer: coarse) {
+      .worms-key-hint { display: none; }
+    }
+  </style>
+  <p style="color: gray; padding-left: 8px; min-height: 1.5em;">
+    <span class="worms-key-hint"><%= t('redWorm') %> <span style="color: lightgray">WASD</span></span>
     <% if (props.mode === 'two') { %>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Grüner Wurm: <span style="color: lightgray">PFEILTASTEN</span>
+      <span class="worms-key-hint">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= t('greenWorm') %> <span style="color: lightgray"><%= t('arrowKeys') %></span></span>
     <% } else { %>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: lightgray">Besiege den grünen Wurm!</span>
+      <span class="worms-key-hint">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><span style="color: lightgray"><%= t('defeatGreenWorm') %></span>
     <% } %>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Neustart: <span style="color: lightgray">ENTER</span>
+    <span class="worms-key-hint">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<%= t('restart') %> <span style="color: lightgray">ENTER</span></span>
   </p>
-  <div id="fullscreenToggle" style="position:absolute; top:4px; right: 0; padding-right: 4px; color: gray; text-decoration: underline; cursor: pointer;">Vollbild</div>
+  <div id="fullscreenToggle" data-fullscreen-label="<%= t('fullscreen') %>" data-close-fullscreen-label="<%= t('closeFullscreen') %>" style="position:absolute; top:4px; right: 0; padding-right: 4px; color: gray; text-decoration: underline; cursor: pointer;"><%= t('fullscreen') %></div>
   <div id="board" style="max-width: min(90vw, 130vh); margin: 0 auto;"></div>
 </div>
 
@@ -30,16 +36,22 @@
 
 <script>
   const redResetRef = {}
-  const red = createKeyboardPlayer('w', 'd', 's', 'a', redResetRef, {touchPosition: 'left'})
+  let wormer = null
+  const onFirstInput = () => wormer && wormer.start()
+
+  const red = createKeyboardPlayer('w', 'd', 's', 'a', redResetRef, {
+    touchPosition: 'left',
+    onFirstInput
+  })
   let green = null
   let greenResetRef = {}
   if (window.MODE === 'two') {
-    green = createKeyboardPlayer('ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', greenResetRef, {touchPosition: 'right'})
+    green = createKeyboardPlayer('ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', greenResetRef, {touchPosition: 'right', onFirstInput})
   } else {
     green = createDemoBot()
   }
 
-  const wormer = new Wormer(document.getElementById('board'), red, green)
+  wormer = new Wormer(document.getElementById('board'), red, green, JSON.parse('<%- props.wormerMessages %>'), { pressToStart: true })
   wormer.run()
 
   function restart() {
@@ -67,7 +79,9 @@
 
   function updateFsButton() {
     if (!fsBtn) return
-    fsBtn.textContent = isFullscreen() ? 'Vollbild schließen' : 'Vollbild'
+    fsBtn.textContent = isFullscreen()
+      ? fsBtn.dataset.closeFullscreenLabel
+      : fsBtn.dataset.fullscreenLabel
   }
 
   function requestFs(element) {

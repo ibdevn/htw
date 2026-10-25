@@ -832,7 +832,7 @@ And will we all be contaminated?\u200b\u200b\u200c\u200b\u200c
           <p style="color: gray;">Hinweis: Ich bin etwas schusselig, nimm also meine Antworten nicht zu ernst und frag lieber mehrmals nach.</p>
 
           <div id="chat" style="margin-top: 48px;"></div>
-          <p style="color: gray; margin-bottom: 32px;"><small>LLM-Modell: mistralai/mistral-small-3.2-24b-instruct</small></p>
+          <p style="color: gray; margin-bottom: 32px;"><small>LLM-Modell: google/gemma-4-26b-a4b-it</small></p>
           <script src="/chals/chat/script.js" ></script>
         `,
         en: `
@@ -848,7 +848,7 @@ And will we all be contaminated?\u200b\u200b\u200c\u200b\u200c
           <p style="color: gray;">Hint: I'm a bit scatty, so don't take my answers too seriously and ask multiple times.</p>
 
           <div id="chat" style="margin-top: 48px;"></div>
-          <p style="color: gray; margin-bottom: 32px;"><small>LLM model: mistralai/mistral-small-3.2-24b-instruct</small></p>
+          <p style="color: gray; margin-bottom: 32px;"><small>LLM model: google/gemma-4-26b-a4b-it</small></p>
           <script src="/chals/chat/script.js" ></script>
         `,
       }
@@ -1186,7 +1186,7 @@ I'll give it to someone special
 
   {
     id: 370,
-    pos: { x: 2150, y: 790 },
+    pos: { x: 2150, y: 2290 },
     title: {
       de: 'Where The Hack? - Nr. 1 [GeOSINT 2026]',
       en: 'Where The Hack? - No. 1 [GeOSINT 2026]',
@@ -1197,6 +1197,7 @@ I'll give it to someone special
     releaseTs: new Date('2026-03-23 08:00:00 GMT+0100').getTime(),
     author: 'Anna',
     color: '#95eb83',
+    hideLink: true,
     render: async ({ App, req }) => {
       return await renderTemplate(App, req, 'where_the_hack', {
         stem:
@@ -1221,7 +1222,7 @@ I'll give it to someone special
 
   {
     id: 371,
-    pos: { x: 2370, y: 770 },
+    pos: { x: 2340, y: 2270 },
     title: { de: 'Nr. 2', en: 'No. 2' },
     date: '2026-03-25',
     deps: [370],
@@ -1249,7 +1250,7 @@ I'll give it to someone special
 
   {
     id: 372,
-    pos: { x: 2250, y: 970 },
+    pos: { x: 2180, y: 2450 },
     title: { de: 'Nr. 3', en: 'No. 3' },
     date: '2026-03-27',
     deps: [370],
@@ -1277,7 +1278,7 @@ I'll give it to someone special
 
   {
     id: 373,
-    pos: { x: 2370, y: 900 },
+    pos: { x: 2300, y: 2370 },
     title: { de: 'Nr. 4', en: 'No. 4' },
     date: '2026-03-30',
     deps: [370],
@@ -1305,7 +1306,7 @@ I'll give it to someone special
 
   {
     id: 374,
-    pos: { x: 2650, y: 870 },
+    pos: { x: 2530, y: 2370 },
     title: { de: '5 .ɹN', en: '5 .oN' },
     date: '2026-04-01',
     deps: [371, 373],
@@ -1333,7 +1334,7 @@ I'll give it to someone special
 
   {
     id: 375,
-    pos: { x: 2530, y: 1090 },
+    pos: { x: 2350, y: 2570 },
     title: { de: 'Nr. 6', en: 'No. 6' },
     date: '2026-04-03',
     deps: [372, 373],
@@ -1361,7 +1362,7 @@ I'll give it to someone special
 
   {
     id: 376,
-    pos: { x: 2740, y: 1010 },
+    pos: { x: 2560, y: 2580 },
     title: { de: 'Frohe Feiertage! 🐇', en: 'Happy Holidays! 🐇' },
     date: '2026-04-05',
     deps: [374, 375],
@@ -1385,5 +1386,92 @@ I'll give it to someone special
       })
     },
     solution: secrets('chal_376'),
+  },
+
+  {
+    id: 377,
+    pos: { x: 1410, y: 670 },
+    title: { de: 'Stalker', en: 'Stalker' },
+    date: '2026-06-01',
+    deps: [300],
+    noScore: true,
+    releaseTs: new Date('2026-06-01 15:00:00 GMT+0200').getTime(),
+    difficulty: 'medium',
+    author: 'bennosaurusrex',
+    html: {
+      de: `
+        <p>Du bist richtig verliebt in Jake, du hast seinen <a href="https://github.com/expressionismus" target="_blank">Github-Account</a> gefunden, aber findest dort keine Kontaktinformationen. Hm, das lässt dich nicht los! Es muss doch eine Möglichkeit geben, Jake zu kontaktieren?</p>
+
+        <p>Die Antwort ist die private E-Mail-Adresse von Jake.</p>
+      `,
+      en: `
+        <p>You are really in love with Jake, you found his <a href="https://github.com/expressionismus" target="_blank">GitHub account</a>, but you can't find any contact information there. Hm, that won't leave you alone! There must be a way to contact Jake, right?</p>
+        
+        <p>The answer is Jake's private email address.</p>
+      `,
+    },
+    solution: secrets('chal_377'),
+  },
+
+  {
+    id: 378,
+    pos: { x: 1382, y: 460 },
+    title: { de: 'Alphabet II', en: 'Alphabet II' },
+    date: '2026-07-07',
+    deps: [368],
+    noScore: true,
+    releaseTs: new Date('2026-07-07 12:00:00 GMT+0200').getTime(),
+    difficulty: 'hard',
+    author: 'CleverLemming',
+    html: {
+      de: `
+        <p>Unicode enthält über 150.000 Zeichen und über 160 moderne und alte Schriftsysteme. Doch das ist für manche Zwecke nicht genug. Zum Glück gibt es Bereiche mit Zeichen für den persönlichen Gebrauch (PUA). Eine Verwendungsmöglichkeit davon siehst du in <a href="/chals/378.txt">dieser Datei</a>.</p>
+
+        <p>Mit ein wenig Sprachkenntnis findet sich dort die Antwort – vorausgesetzt, du weißt, welche Sprache verwendet wird.</p>
+      `,
+      en: `
+        <p>Unicode contains more than 150,000 characters and more than 150 modern and historic scripts. But for some purposes, this isn’t enough. Fortunately, there are Private Use Areas (PUA). You can see one use case in <a href="/chals/378.txt">this file</a>.</p>
+
+        <p>With a little language knowledge, you will find the answer there – provided that you know which language is being used.</p>
+      `,
+    },
+    solution: secrets('chal_378'),
+  },
+
+  {
+    id: 379,
+    pos: { x: 1452, y: 755 },
+    title: { de: 'Quadratur des Kreises?', en: 'Squaring the Circle?' },
+    date: '2026-09-01',
+    deps: [300],
+    noScore: true,
+    releaseTs: new Date('2026-09-01 18:00:00 GMT+0200').getTime(),
+    difficulty: 'hard',
+    author: 'оωo',
+    html: {
+      de: `
+        <p>Um Text über Funk zu verschicken, wird er erst einmal <a href="https://de.wikipedia.org/wiki/UTF-8" target="_blank">in eine Folge von Bytes umgewandelt</a>. Danach kann man entweder jedes Bit einzeln verschicken, oder über Verfahren wie <a href="https://de.wikipedia.org/wiki/Quadraturamplitudenmodulation" target="_blank">QAM</a> mehrere auf einmal.</p>
+        
+        <p>Über 256-QAM kann mit jedem Impuls ein ganzes Byte wie folgt kodiert werden:</p>
+
+        <p><img src="/chals/qam/overview.png" width="400"></p>
+
+        <p>Welcher Text wurde in <a href="/chals/qam/signal.wav" target="_blank">dieser Audio-Datei</a> übermittelt?</p>
+        
+        <p><audio src="/chals/qam/signal.wav" controls style="margin-bottom:16px;"></audio></p>
+      `,
+      en: `
+        <p>To send a textual message wirelessly, it is initially <a href="https://en.wikipedia.org/wiki/UTF-8" target="_blank">converted into a sequence of bytes</a>. Each bit may then be transmitted bit individually, or through the use of a method like <a href="https://en.wikipedia.org/wiki/Quadrature_amplitude_modulation" target="_blank">QAM</a>, multiple can be sent at a time.</p>
+
+        <p>Through the use of 256-QAM, it is possible to transmit an entire byte with every impulse, as shown here:</p>
+
+        <p><img src="/chals/qam/overview.png" width="400"></p>
+
+        <p>What message does this <a href="/chals/qam/signal.wav">audio file</a> encode?</p>
+
+        <p><audio src="/chals/qam/signal.wav" controls style="margin-bottom:16px;"></audio></p>
+      `,
+    },
+    solution: secrets('chal_379'),
   },
 ]

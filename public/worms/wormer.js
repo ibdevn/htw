@@ -3,10 +3,30 @@
 // directions: 0 up, 1, right, 2, down, 3, left
 
 class Wormer {
-  constructor(div, actRed, actGreen) {
+  constructor(div, actRed, actGreen, messages = {}, options = {}) {
     this.div = div
     this.actRed = actRed
     this.actGreen = actGreen
+    this.messages = {
+      redWins: 'Red wins',
+      greenWins: 'Green wins',
+      matchAborted: 'Match forfeited',
+      opponentCrashed: 'Opponent bot crashed, e.g. error or limit reached',
+      restart: 'Restart',
+      pressToStart: 'Press a direction to start',
+      ...messages,
+    }
+
+    this.pressToStart = options.pressToStart === true
+
+    // human against bot: the human gets as much time per move as the bot
+    // needed for its last move, at least the normal speed
+    this.fairTime = false
+    this.thinkTime = 0
+
+    if (options.seed) {
+      this.seed = options.seed.split('|').map((x) => parseInt(x) % 8)
+    }
 
     // constants
     this.OFFSETS = [
@@ -26,6 +46,7 @@ class Wormer {
 
   reset() {
     this.div.innerHTML = ''
+    this.startHint = null
 
     this.div.style.display = 'grid'
     this.div.style.gridTemplateColumns = 'repeat(74, 1fr)' // 74 equally spaced columns
@@ -62,20 +83,61 @@ class Wormer {
     this.winner = '' // 'red' | 'green'
 
     // game state
-    this.redX = 10 + Math.floor(Math.random() * 8 - 4)
-    this.redY = 20 + Math.floor(Math.random() * 8 - 4)
+    if (!this.seed) {
+      this.seed = [
+        Math.random() * 8,
+        Math.random() * 8,
+        Math.random() * 8,
+        Math.random() * 8,
+      ]
+    }
+    this.redX = 10 + Math.floor(this.seed[0] - 4)
+    this.redY = 20 + Math.floor(this.seed[1] - 4)
     this.redDir = 1 //Math.floor(Math.random() * 3)
 
-    this.greenX = 61 + Math.floor(Math.random() * 8 - 4)
-    this.greenY = 21 + Math.floor(Math.random() * 8 - 4)
+    this.greenX = 61 + Math.floor(this.seed[2] - 4)
+    this.greenY = 21 + Math.floor(this.seed[3] - 4)
     this.greenDir = 3 //(Math.floor(Math.random() * 3) + 2) % 4
 
     this.lastTick = new Date().getTime()
     this.turbo = false
+    this.consumed = 0
+
+    this.paused = this.pressToStart
+    if (this.pressToStart) this.showStartHint()
   }
 
   toggleTurbo() {
     this.turbo = !this.turbo
+  }
+
+  showStartHint() {
+    const hint = document.createElement('div')
+    hint.id = 'start-hint'
+    hint.textContent = this.messages.pressToStart
+    hint.style.position = 'absolute'
+    hint.style.top = '50%'
+    hint.style.left = '50%'
+    hint.style.transform = 'translate(-50%, -120%)'
+    hint.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'
+    hint.style.color = 'white'
+    hint.style.padding = '12px 20px'
+    hint.style.borderRadius = '10px'
+    hint.style.fontSize = '22px'
+    hint.style.textAlign = 'center'
+    hint.style.zIndex = '1000'
+    this.div.appendChild(hint)
+    this.startHint = hint
+  }
+
+  // if human start playing, call this
+  start() {
+    if (!this.pressToStart || !this.paused) return
+    this.paused = false
+    if (this.startHint) {
+      this.startHint.remove()
+      this.startHint = null
+    }
   }
 
   runReplay(replay) {
@@ -93,8 +155,83 @@ class Wormer {
     this.actGreen = replayGreen(this.dirs)
 
     this.withCrash = replay.withCrash
+    this.aborted = replay.aborted
+
+    // replays don't look at the board, no need to copy it for every move
+    this.isReplay = true
+    this.startPos = replay
 
     this.run(true)
+  }
+
+  // replay: jump to the state after `target` moves (red and green in pairs)
+  seek(target) {
+    target = Math.max(
+      0,
+      Math.min(target, this.dirs.length - (this.dirs.length % 2))
+    )
+    // the animation loop ends with the match, it has to start again then
+    const loopEnded = !!this.winner
+    if (this.winnerMessage) {
+      this.winnerMessage.remove()
+      this.winnerMessage = null
+    }
+    for (let x = 0; x < 74; x++) {
+      for (let y = 0; y < 42; y++) {
+        const wall = x == 0 || y == 0 || x == 73 || y == 41
+        this.board[x][y] = wall ? -1 : 0
+        this.setColor(x, y, wall ? '#172554' : '#1e40af')
+      }
+    }
+    this.winner = ''
+    this.redX = this.startPos.xRed
+    this.redY = this.startPos.yRed
+    this.redDir = this.startPos.dirRed
+    this.greenX = this.startPos.xGreen
+    this.greenY = this.startPos.yGreen
+    this.greenDir = this.startPos.dirGreen
+    this.actRed = replayRed(this.dirs)
+    this.actGreen = replayGreen(this.dirs)
+    this.consumed = 0
+    this.setColor(this.redX, this.redY, this.COLORS.red.head)
+    this.setColor(this.greenX, this.greenY, this.COLORS.green.head)
+    this.board[this.redX][this.redY] = 1
+    this.board[this.greenX][this.greenY] = 2
+    while (!this.winner && this.consumed < target) {
+      this.step()
+    }
+    this.lastTick = new Date().getTime()
+    if (loopEnded && !this.winner) {
+      requestAnimationFrame(this.tick.bind(this))
+    }
+  }
+
+  // live mode: moves arrive while the match is still computed on the server
+  runLive(start) {
+    this.live = true
+    this.liveDone = false
+    this.consumed = 0
+    this.runReplay({ ...start, dirs: [] })
+  }
+
+  // jump to the newest move, e.g. when joining a running match late
+  skipAhead() {
+    while (!this.winner && this.dirs.length >= this.consumed + 2) {
+      this.step()
+    }
+  }
+
+  feedLive(dirs) {
+    this.dirs.push(...dirs)
+  }
+
+  finishLive(replay) {
+    // replace in place, the replay players hold a reference to this array
+    this.dirs.length = 0
+    this.dirs.push(...replay.dirs)
+    this.withCrash = replay.withCrash
+    this.aborted = replay.aborted
+    this.liveDone = true
   }
 
   setColor(x, y, bg) {
@@ -105,12 +242,14 @@ class Wormer {
   setWinnerMessage() {
     const message = document.createElement('div')
     message.innerHTML =
-      (this.winner == 'red' ? 'Rot gewinnt' : 'Grün gewinnt') +
-      (this.withCrash
-        ? '<br><span style="font-size: 15px; color: gray;">(Gegner-Bot abgestürzt, z.B. Fehler oder Limit erreicht)</span>'
-        : '') +
+      (this.winner == 'red' ? this.messages.redWins : this.messages.greenWins) +
+      (this.aborted
+        ? `<br><span style="font-size: 15px; color: gray;">(${this.messages.matchAborted})</span>`
+        : this.withCrash
+          ? `<br><span style="font-size: 15px; color: gray;">(${this.messages.opponentCrashed})</span>`
+          : '') +
       (window.restart
-        ? '<br><span onclick="restart()" style="text-decoration:underline; cursor: pointer; color: gray; font-size: 16px;">Neustart</span>'
+        ? `<br><span onclick="restart()" style="text-decoration:underline; cursor: pointer; color: gray; font-size: 16px;">${this.messages.restart}</span>`
         : '')
     message.style.position = 'absolute'
     message.style.top = '30%'
@@ -126,6 +265,9 @@ class Wormer {
 
     // Append message to this.div
     this.div.appendChild(message)
+    this.winnerMessage = message
+
+    if (this.onFinish) this.onFinish(this.winner)
   }
 
   run(noReset) {
@@ -143,25 +285,67 @@ class Wormer {
     if (this.winner) {
       return
     }
-    const ts = new Date().getTime()
 
-    if (ts - this.lastTick < 120 && !this.turbo) {
+    // live mode: wait until the next red and green move have arrived
+    if (this.live && !this.liveDone && this.dirs.length < this.consumed + 2) {
       requestAnimationFrame(this.tick.bind(this))
       return
-    } else {
-      this.lastTick = ts
     }
 
+    const ts = new Date().getTime()
+
+    const interval = this.fairTime ? Math.max(120, this.thinkTime) : 120
+
+    // turbo: no waiting, live it shows the newest move right away
+    const noWait = this.instant || this.turbo
+
+    // held: the viewer drags the timeline, no moves until it is let go
+    if (
+      this.paused ||
+      this.held ||
+      (ts - this.lastTick < interval && !noWait)
+    ) {
+      requestAnimationFrame(this.tick.bind(this))
+      return
+    }
+
+    this.lastTick = ts
+
+    // instant: play the whole replay at once and only show the final board.
+    // live turbo: everything that has arrived, the server can be faster
+    // than one move per frame
+    const toNewest = this.live && this.turbo && !this.liveDone
+    do {
+      this.step()
+    } while (
+      !this.winner &&
+      (this.instant || (toNewest && this.dirs.length >= this.consumed + 2))
+    )
+
+    // the time for the human starts when the new position is shown, not
+    // before the bot started thinking
+    if (this.fairTime) this.lastTick = new Date().getTime()
+
+    if (!this.winner) {
+      requestAnimationFrame(this.tick.bind(this))
+    }
+  }
+
+  step() {
+    this.consumed += 2
+
+    const redStart = performance.now()
     const newRedDir = this.actRed(
       74,
       42,
-      JSON.parse(JSON.stringify(this.board)),
+      this.isReplay ? null : JSON.parse(JSON.stringify(this.board)),
       this.redX,
       this.redY,
       this.redDir,
       this.greenX,
       this.greenY
     )
+    this.thinkTime = performance.now() - redStart
     if (
       newRedDir === 0 ||
       newRedDir === 1 ||
@@ -190,16 +374,18 @@ class Wormer {
       return
     }
 
+    const greenStart = performance.now()
     const newGreenDir = this.actGreen(
       74,
       42,
-      JSON.parse(JSON.stringify(this.board)),
+      this.isReplay ? null : JSON.parse(JSON.stringify(this.board)),
       this.greenX,
       this.greenY,
       this.greenDir,
       this.redX,
       this.redY
     )
+    this.thinkTime += performance.now() - greenStart
     if (
       newGreenDir === 0 ||
       newGreenDir === 1 ||
@@ -227,18 +413,25 @@ class Wormer {
       this.setColor(this.greenX, this.greenY, '#052e16')
       this.setWinnerMessage()
     }
-    requestAnimationFrame(this.tick.bind(this))
   }
 }
 
 function createKeyboardPlayer(up, right, down, left, resetRef, opts = {}) {
   let lastDir = -1 // last applied direction
   let newDir = -1 // pending direction (consumed each tick)
+  let started = false
+
+  const notifyStart = () => {
+    if (started) return
+    started = true
+    if (opts.onFirstInput) opts.onFirstInput()
+  }
 
   // --- RESET HANDLER ---
   resetRef.reset = () => {
     lastDir = -1
     newDir = -1
+    started = false
     // Clear active button visual state if touch pad exists
     if (padEl) {
       padEl
@@ -269,6 +462,7 @@ function createKeyboardPlayer(up, right, down, left, resetRef, opts = {}) {
       default:
         return
     }
+    notifyStart()
   })
 
   // --- TOUCH / POINTER D-PAD (optional) ---
@@ -283,9 +477,15 @@ function createKeyboardPlayer(up, right, down, left, resetRef, opts = {}) {
     const style = document.createElement('style')
     style.id = 'worm-touch-styles'
     style.textContent = `
-      .worm-touch-pad {position:fixed; bottom:12px; z-index:1500; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); grid-template-areas:"empty1 up empty2" "left empty3 right" "empty4 down empty5"; gap:6px; --worm-btn-size:60px; opacity:0.55; touch-action:none;}
-      .worm-touch-pad.left {left:12px;}
-      .worm-touch-pad.right {right:12px;}
+      .worm-touch-row {display:flex; justify-content:space-around; margin-top:12px;}
+      .worm-touch-pad {z-index:1500; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); grid-template-areas:"empty1 up empty2" "left empty3 right" "empty4 down empty5"; gap:6px; --worm-btn-size:60px; opacity:0.8; touch-action:none;}
+      .worm-touch-pad.right {order:1;}
+      #game:fullscreen .worm-touch-pad {position:fixed; bottom:12px; opacity:0.55;}
+      #game:fullscreen .worm-touch-pad.left {left:12px;}
+      #game:fullscreen .worm-touch-pad.right {right:12px;}
+      #game:-webkit-full-screen .worm-touch-pad {position:fixed; bottom:12px; opacity:0.55;}
+      #game:-webkit-full-screen .worm-touch-pad.left {left:12px;}
+      #game:-webkit-full-screen .worm-touch-pad.right {right:12px;}
       .worm-touch-pad .worm-touch-btn { grid-area:auto; width:var(--worm-btn-size); height:var(--worm-btn-size); background:rgba(30,58,138,0.45); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.25); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff; user-select:none; -webkit-user-select:none; touch-action:none; font-family:system-ui,sans-serif;}
       .worm-touch-pad .worm-touch-btn.up {grid-area:up;}
       .worm-touch-pad .worm-touch-btn.down {grid-area:down;}
@@ -296,6 +496,17 @@ function createKeyboardPlayer(up, right, down, left, resetRef, opts = {}) {
     `
     document.getElementById('game').appendChild(style)
     window.__wormTouchStyles = true
+  }
+
+  function getTouchRow() {
+    let row = document.getElementById('worm-touch-row')
+    if (!row) {
+      row = document.createElement('div')
+      row.id = 'worm-touch-row'
+      row.className = 'worm-touch-row'
+      document.getElementById('game').appendChild(row)
+    }
+    return row
   }
 
   function buildPad(position) {
@@ -338,6 +549,7 @@ function createKeyboardPlayer(up, right, down, left, resetRef, opts = {}) {
         if (!btn) return
         const intended = parseInt(btn.dataset.dir)
         if (isNaN(intended)) return
+        notifyStart()
         // Guard against 180° reversal relative to lastDir
         if (!isOpposite(intended, lastDir)) {
           newDir = intended
@@ -367,7 +579,9 @@ function createKeyboardPlayer(up, right, down, left, resetRef, opts = {}) {
 
   if (hasTouch && opts.enableTouch !== false) {
     padEl = buildPad(opts.touchPosition === 'right' ? 'right' : 'left')
-    document.getElementById('game').appendChild(padEl)
+    // below the board instead of on top of it, so the pad never hides the
+    // worms (in fullscreen the pads float at the edges again)
+    getTouchRow().appendChild(padEl)
 
     // API hooks
     resetRef.setTouchPosition = (pos) => {

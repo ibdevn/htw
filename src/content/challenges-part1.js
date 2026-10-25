@@ -174,7 +174,8 @@ export const part1 = [
       return renderTemplate(
         App,
         req,
-        '../../server/views/partials/set-difficulty'
+        '../../server/views/partials/set-difficulty',
+        { difficulty: '' }
       )
     },
   },
@@ -1106,7 +1107,7 @@ export const part1 = [
         <p>Mich nervt es, wenn diese Chatbots alle in ihrem selbstsicheren Ton daher kommen. Das ist doch völlig unauthentisch. Ich habe mal einen anderen Bot gebaut. Der Bot kennt deine Antwort, aber davor musst du erstmal sein Vertrauen gewinnen. Keine Ahnung, ich glaube, dass Komplimente ein guter Ansatz sind ...</p>
 
         <div id="chat" style="margin-top: 48px;"></div>
-        <p style="color: gray; margin-bottom: 32px;"><small>LLM-Modell: mistralai/mistral-small-3.2-24b-instruct</small></p>
+        <p style="color: gray; margin-bottom: 32px;"><small>LLM-Modell: google/gemma-4-26b-a4b-it</small></p>
         <script src="/chals/chat/script.js" ></script>
     `
       ),
@@ -1124,7 +1125,7 @@ export const part1 = [
         <p>It annoys me when these chatbots all come across with their self-confident tone. It's completely inauthentic. I've built a different kind of bot. This bot knows your answer, but first, you have to win its trust. I don't know, I think compliments are a good approach...</p>
 
         <div id="chat" style="margin-top: 48px;"></div>
-        <p style="color: gray; margin-bottom: 32px;"><small>LLM model: mistralai/mistral-small-3.2-24b-instruct</small></p>
+        <p style="color: gray; margin-bottom: 32px;"><small>LLM model: google/gemma-4-26b-a4b-it</small></p>
         <script src="/chals/chat/script.js" ></script>
       `
       ),
@@ -1465,12 +1466,9 @@ export const part1 = [
       return {
         de: story(
           'Josh',
-          App.experiments.showTrial(30, req)
-            ? `
-          <p>Auf welchen Account möchten Hacker am liebsten zugreifen? Der Name des Accounts ist die Antwort zu dieser Aufgabe.</p>
-        `
-            : `
+          `
           <p style="min-width: 65ch">Im welchem Jahr liegt der Zeitpunkt 817876800?</p>
+          ${App.experiments.showTrial(30, req) ? '' : `<div id="continue-button"></div>`}
         `
         ),
         en: story(
@@ -1929,19 +1927,25 @@ export const part1 = [
     id: 47,
     pos: { x: 1060, y: 690 },
     title: { de: 'Ladebalken', en: 'Progressbar' },
+    hasHardVersion: true,
     // date: '2020-05-20',
     deps: [18, 60, 84],
-    html: {
-      de: story(
-        'Bex',
-        `
+    render: ({ hardMode }) => {
+      return {
+        de: story(
+          'Bex',
+          `
         <p>Ich verrate dir eine kleine peinliche Geschichte von mir. Erzähle sie ja nicht weiter!</p>
 
         <p>Aus irgendeinem Grund glaubte ich lange Zeit, dass Ladebalken am Computer schneller laufen, wenn ich auf der Tastatur tippe. Das machte ich also jedes Mal, während ich auf etwas wartete. Einmal fragte mich Kiwi, was ich denn da mache und ich erzählte ihr den Grund. Sie lachte mich einfach aus und mein Kopf lief total rot an als ich meinen Aberglauben bemerkte.</p>
 
-        <p>Um mich besser zu fühlen programmierte ich dann einen Ladebalken, der tatsächlich schneller läuft wenn man auf Tasten drückt. An dem darfst du dich jetzt ausprobieren. Sobald der Balken voll ist, erhältst du deine Antwort.</p>
+        <p>${
+          hardMode
+            ? `Zwar funktioniert das Tippen nicht, aber mit bisschen Hacking kannst du das Ergebnis schneller erhalten.`
+            : `Um mich besser zu fühlen programmierte ich dann einen Ladebalken, der tatsächlich schneller läuft wenn man auf Tasten drückt. An dem darfst du dich jetzt ausprobieren. Sobald der Balken voll ist, erhältst du deine Antwort.`
+        }</p>
         `,
-        `
+          `
         <div class="progress my-4">
           <div id="44_bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 1%"></div>
         </div>
@@ -1981,9 +1985,13 @@ export const part1 = [
             }
           }
           
-          window.onkeydown = (e) => {
+          ${
+            hardMode
+              ? ''
+              : `window.onkeydown = (e) => {
             if (e.repeat) return
             work(true)
+          }`
           }
           
           value.innerHTML = x
@@ -1992,17 +2000,21 @@ export const part1 = [
           setTimeout(work, 1000)
         </script>
     `
-      ),
-      en: story(
-        'Bex',
-        `
+        ),
+        en: story(
+          'Bex',
+          `
         <p>Let me tell you a slightly embarrassing story about me. Don't tell anyone!</p>
 
         <p>For some reason, I used to believe that progress bars on a computer run faster if I type on the keyboard. So I did it every single time while waiting. Once, Kiwi asked me what I was doing, and I told her why. She just laughed — and I blushed like crazy when I realized my superstition.</p>
 
-        <p>To make myself feel better, I programmed a progress bar that actually becomes faster when you press keys. Go ahead and try it. As soon as the bar is full, you'll get your answer.</p>
+        <p>${
+          hardMode
+            ? `Admittedly, typing doesn't work, but with a little hacking you can get the result faster.`
+            : `To make myself feel better, I programmed a progress bar that actually becomes faster when you press keys. Go ahead and try it. As soon as the bar is full, you'll get your answer.`
+        }</p>
         `,
-        `
+          `
         <div class="progress my-4">
           <div id="44_bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 1%"></div>
         </div>
@@ -2039,9 +2051,13 @@ export const part1 = [
             }
           }
           
-          window.onkeydown = (e) => {
+          ${
+            hardMode
+              ? ''
+              : `window.onkeydown = (e) => {
             if (e.repeat) return
             work(true)
+          }`
           }
           
           value.innerHTML = x
@@ -2050,7 +2066,8 @@ export const part1 = [
           setTimeout(work, 1000)
         </script>
     `
-      ),
+        ),
+      }
     },
     solution: secrets('chal_47'),
   },
@@ -2363,7 +2380,7 @@ export const part1 = [
     renderAfterSolveText: () => {
       return {
         de: '<p>Die Farbe wurde zum Gedenken an die verstorbene Tochter des CSS-Entwicklers Eric A. Meyer benannt und findet sich im neuen <a href="https://de.m.wikipedia.org/wiki/Datei:Official_CSS_Logo.svg" target="_blank">CSS-Logo</a>.</p>',
-        en: '<p>The color was named in memory of the late daughter of CSS developer Eric A. Meyer and is featured in the new <a href="https://en.wikipedia.org/wiki/File:CSS3_logo.svg" target="_blank">CSS logo</a>.</p>',
+        en: '<p>The color was named in memory of the late daughter of CSS developer Eric A. Meyer and is featured in the new <a href="https://commons.wikimedia.org/wiki/File:Official_CSS_Logo.svg" target="_blank">CSS logo</a>.</p>',
       }
     },
   },
@@ -2476,6 +2493,7 @@ export const part1 = [
     title: { de: 'Ankunft in Sirtach', en: 'Arrival In Sirtach' },
     // date: '2020-08-17',
     deps: [27, 41, 64],
+    hasHardVersion: true,
     render: ({ App, req }) => {
       return {
         de: story(
@@ -2745,7 +2763,7 @@ export const part1 = [
         de: story(
           'Kiwi',
           `
-          <p>Ein "skill issue" liegt vor, wenn es einer Person an Kompetenz mangelt. So geht es mir bei diesem dämlichen Spiel. Du steuerst den Ball mit den Pfeiltasten und versuchst, abwechselnd die linke und rechte Wand zu berühren. Nach 100 Mal erhältst du die Antwort. Bex ist ein richtiges Naturtalent, <a href="/chals/volleyball.mp4" target="blank">hier siehst du ein Video</a> wie er das spielt.</p>
+          <p>Ein "skill issue" liegt vor, wenn es einer Person an Kompetenz mangelt. So geht es mir bei diesem dämlichen Spiel. Du steuerst den Ball mit den Pfeiltasten und versuchst, abwechselnd die linke und rechte Wand zu berühren. Nach 100 Mal erhältst du die Antwort. Bex ist ein richtiges Naturtalent, <a href="/chals/volleyball.mp4" target="blank">hier siehst du ein Video</a> wie sie das spielt.</p>
 
           <p>Vielleicht bist du ja auch so kompetent - ich bin es nicht. Dafür kann ich hacken, haha. Du kannst dir den Quellcode des Spiels anschauen und bearbeiten. Ich habe dir eine Stelle im Code markiert, mit der du ganz einfach gewinnen kannst. Viel Erfolg!</p>
           `,
@@ -2754,7 +2772,7 @@ export const part1 = [
         en: story(
           'Kiwi',
           `
-          <p>A "skill issue" is when a person simply lacks competence. That's exactly how I feel about this stupid game. You control the ball with the arrow keys and have to alternately touch the left and right walls. After doing that 100 times, you get the answer. Bex is a real natural at this, <a href="/chals/volleyball.mp4" target="blank">here's a video of him playing</a>.</p>
+          <p>A "skill issue" is when a person simply lacks competence. That's exactly how I feel about this stupid game. You control the ball with the arrow keys and have to alternately touch the left and right walls. After doing that 100 times, you get the answer. Bex is a real natural at this, <a href="/chals/volleyball.mp4" target="blank">here's a video of her playing</a>.</p>
           
           <p>Maybe you're that competent - I'm not. But what I can do is hack, haha. You can view and edit the game's source code. I've even marked a spot in the code for you that'll let you win easily. Good luck!</p>
           `,
@@ -3015,7 +3033,7 @@ export const part1 = [
             margin: 12px;
             touch-action: none;
             user-select: none;
-            cursor: move;
+            ${hardMode ? '' : 'cursor: move;'}
           }
           #puzzle-container {
             position: relative;
@@ -3075,7 +3093,7 @@ export const part1 = [
           `
           <p>I so often look at my life and think to myself: What's the point of it all? I hope there will be a day when I can put the pieces together and understand the meaning.</p>
 
-          <p>With this task, you have it easier. Place the six parts on top of each other${
+          <p>With this task, you have it easier. Place the six parts on top of each other ${
             hardMode ? '' : 'with your mouse or finger'
           } to get your answer.</p>
           `,
@@ -3202,75 +3220,40 @@ export const part1 = [
     title: { de: 'Verdächtig', en: 'Suspicious' },
     // date: '2022-02-24',
     deps: [18, 84],
-    render: ({ App, req }) => {
-      return {
-        de: story(
-          'Josh',
-          App.experiments.showTrial(79, req)
-            ? `
-              <p>Ein paar dieser E-Mail-Adressen sind gefälscht, aber es braucht ein gutes Auge, um sie zu erkennen:</p>
-
-              <pre><code>noreply@dhl.de
-info@telekom.de
-security@mail.instagrarn.com
-no-reply@amazon.de
-bahncard-service@bahn.de
-info@teIekom.de
-noreply@zalando.de
-noreply@web.de
-security@mail.instagram.com
-no-reply@amaz0n.de
-</code></pre>
-              <p>Deine Antwort sind die Anfangsbuchstaben der gefälschten Adressen, in der Reihenfolge wie oben.</p>
-            `
-            : `
-          <p>Dein Bankkonto steht im Fokus. Du erhältst eine E-Mail von deiner Bank, in der von ungewöhnlichen Aktivitäten berichtet wird. Doch irgendetwas ist shady – der Absender scheint nicht ganz vertrauenswürdig zu sein.</p>
-          
-          <p>In der "Von:"-Zeile findest du die E-Mail-Adresse des Absenders. Deine Bank verwendet normalerweise die Domain <code>htw-bank.de</code>, aber in dieser Nachricht taucht eine andere Domain auf.</p>
-          
-          <pre>Von: "Hack The Web Bank" &lt;support@secure-bank-login.com&gt;
-Datum: Fri, 08 Feb 2025 10:15:32 +0200
-Betreff: Wichtige Sicherheitsinformation zu Ihrem Konto
-An: ${req.user?.name}@arrrg.de</pre>
-
-          <p>Gib die verdächtige Domain als deine Antwort ein.</p>
-    `
-        ),
-        en: story(
-          'Josh',
-          App.experiments.showTrial(79, req)
-            ? `
-              <p>Some of these email addresses are fake — but it takes a good eye to spot them:</p>
-
-              <pre><code>noreply@dhl.de
-info@telekom.de
-security@mail.instagrarn.com
-no-reply@amazon.de
-bahncard-service@bahn.de
-info@teIekom.de
-noreply@zalando.de
-noreply@web.de
-security@mail.instagram.com
-no-reply@amaz0n.de
-</code></pre>
-              <p>Your answer is the first letters of the fake addresses, in the order shown above.</p>
-            `
-            : `
-        <p>Your bank account is in the spotlight. You receive an email from your bank reporting unusual activity. But something feels shady – the sender doesn't seem entirely trustworthy.</p>
+    render: () => ({
+      de: story(
+        'Josh',
+        `
+        <p>Im Internet muss man schon gut aufpassen, ansonsten wird man doch glatt über den Tisch gezogen ...</p>
         
-        <p>In the "From:" line, you find the sender's email address. Your bank normally uses the domain <code>htw-bank.de</code>, but this message shows a different domain.</p>
-        
-        <pre>From: "Hack The Web Bank" &lt;support@secure-bank-login.com&gt;
-Date: Fri, 08 Feb 2025 10:15:32 +0200
-Subject: Important security notice regarding your account
-To: ${req.user?.name}@arrrg.de</pre>
+        <hr>
 
-        <p>Enter the suspicious domain as your answer.</p>
+        <p>Hey!</p>
 
-    `
-        ),
-      }
-    },
+        <p>Du bist auf der Suche nach deiner Antwort? Um das Wort mit 7 Buchstaben zu erhalten, musst du mir nur 1337€ auf <a href="https://www.paypal.com/paypalme/Dav1dL1">dieses Konto</a> überweisen, ganz einfach.</p>
+
+        <p>Worauf wartest du noch? Das Wort, dass sich auf "Wein" reimt, findet sich nicht von selber! <a href="https://www.paypal.com/paypalme/Dav1dL1">Klicke hier</a> und überweise das Geld, dann erhältst du die Antwort sofort.</p>
+
+        <p>Psst, Sonderangebot! Du erhältst die ersten drei Buchstaben gratis (sie lauten SCH), und ich mache 50% Rabatt, dann verrate ich dir die Lösung. <a href="https://www.paypal.com/paypalme/Dav1dL1">Überweise das Geld</a> jetzt!
+      `
+      ),
+      en: story(
+        'Josh',
+        `
+        <p>The internet is full of people out to scam you — you have to keep your wits about you, or you'll get taken for a ride...</p>
+
+        <hr>
+
+        <p>Hey!</p>
+
+        <p>Looking for your answer? To get the 5-letter word you need, all you have to do is send me 1337€ to <a href="https://www.paypal.com/paypalme/Dav1dL1">this account</a>. Easy, right?</p>
+
+        <p>What are you waiting for? The word won't find itself! It rhymes with "wine". <a href="https://www.paypal.com/paypalme/Dav1dL1">Click here</a> and transfer the money, and you'll get the answer right away.</p>
+
+        <p>Psst, special offer! I'll give you the first two letters for free (they are S, W), and I'll even knock off 50% — then I'll spill the answer. <a href="https://www.paypal.com/paypalme/Dav1dL1">Send the money</a> now!</p>
+      `
+      ),
+    }),
     solution: secrets('chal_79').split(','),
   },
 
@@ -4054,13 +4037,13 @@ To: ${req.user?.name}@arrrg.de</pre>
             <p style="margin-top:64px;">1. Ich habe hier etwas Neues übers Hacking gelernt.</p>
             ${buildHLikert('q1')}
             
-            <p style="margin-top:48px;">2. Ich hätte die Aufgaben lieber ohne die Geschichte drumherum gemacht.</p>
+            <p style="margin-top:48px;">2. Hacken ist eine sinnlose Aktivität.</p>
             ${buildHLikert('q2')}
 
             <p style="margin-top:48px;">3. Die Aufgaben haben mir nicht genug Neues beigebracht.</p>
             ${buildHLikert('q3')}
 
-            <p style="margin-top:48px;">4. Ich finde es gut, dass es eine Geschichte gibt, die sich durch die Aufgaben zieht.</p>
+            <p style="margin-top:48px;">4. Ich finde es wichtig, sich mit dem Thema Hacking zu beschäftigen.</p>
             ${buildHLikert('q4')}
 
             <p style="margin-top:64px;">Was hat dir an Hack The Web besonders gut gefallen und warum? (max. 500 Zeichen)</p>
@@ -4074,7 +4057,7 @@ To: ${req.user?.name}@arrrg.de</pre>
             
             <p style="margin-top:32px;"><button type="submit" class="btn btn-interaction">Abschicken</button></p>
             
-            <input type="hidden" name="version" value="3">
+            <input type="hidden" name="version" value="4">
             <input type="hidden" name="answer" value="_">
           </form>
         </details>
@@ -4114,7 +4097,7 @@ To: ${req.user?.name}@arrrg.de</pre>
 
             <p style="margin-top:32px;"><button type="submit" class="btn btn-interaction">Submit</button></p>
             
-            <input type="hidden" name="version" value="3">
+            <input type="hidden" name="version" value="4">
             <input type="hidden" name="answer" value="_">
           </form>
         </details>

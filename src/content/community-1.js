@@ -1393,6 +1393,8 @@ The compression program bzip2 uses such a method, which this text was prepared f
           <form method="post"><input type="hidden" name="answer" value="${secrets(
             'chal_328'
           )}"><button class="btn btn-interaction btn-sm">Archiv freischalten</button></form>
+
+          <p style="margin-top: 100px"><small>Es gibt sogar Gerüchte über eine verborgene Elite-Aufgabe.</small></p>
         `,
         en: `
           <p>Hello! Your motivation is unstoppable. As a reward, you now receive access to the community archive.</p>
@@ -1404,6 +1406,8 @@ The compression program bzip2 uses such a method, which this text was prepared f
           <form method="post"><input type="hidden" name="answer" value="${secrets(
             'chal_328'
           )}"><button class="btn btn-interaction btn-sm">Unlock Archive</button></form>
+
+          <p style="margin-top: 100px"><small>There are even rumors about a hidden elite challenge.</small></p>
         `,
       }
     },
@@ -1546,10 +1550,10 @@ RS#1</pre>
     difficulty: 'easy',
     html: {
       de: `
-        <p>Discord ist faszinierend. Die Antwort auf diese Aufgabe ist die Nutzer-ID von virusrpi.</p>
+        <p>Discord ist faszinierend. Die Antwort auf diese Aufgabe ist die Nutzer-ID von virus_rpi.</p>
       `,
       en: `
-        <p>Discord is fascinating. The answer to this task is the user id of virusrpi.</p>
+        <p>Discord is fascinating. The answer to this task is the user id of virus_rpi.</p>
       `,
     },
     solution: secrets('chal_333'),

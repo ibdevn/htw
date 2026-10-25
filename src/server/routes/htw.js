@@ -107,7 +107,8 @@ htw_users_total ${Math.max(usercount, c1.solvedBy)}
       content: await renderTemplate(
         App,
         req,
-        '../../server/views/partials/set-difficulty'
+        '../../server/views/partials/set-difficulty',
+        { difficulty: (await App.mapMeta.get(req.user.id)).difficulty }
       ),
     })
   })
@@ -306,6 +307,15 @@ htw_users_total ${Math.max(usercount, c1.solvedBy)}
   App.express.get(['/salü', encodeURI('/salü'), '/salu%CC%88'], (req, res) => {
     if (!req.user && !req.session.__hasSentPromoEvent) {
       App.event.create('promo_salü', 42)
+      req.session.__hasSentPromoEvent = true
+    }
+    // redirect to main page
+    res.redirect('/')
+  })
+
+  App.express.get('/pink', (req, res) => {
+    if (!req.user && !req.session.__hasSentPromoEvent) {
+      App.event.create('promo-pink', 42)
       req.session.__hasSentPromoEvent = true
     }
     // redirect to main page
